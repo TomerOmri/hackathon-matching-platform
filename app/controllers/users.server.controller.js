@@ -10,7 +10,11 @@ const User = require('mongoose').model('User'),
     s3 = require('multer-storage-s3'),
     fs = require('fs'),
     emailService = require('./../services').emailService,
-    emailData = require('./../services/email/resources/emails-data');
+    emailData = require('./../services/email/resources/emails-data'),
+    accountSid = 'AC2e7cf5a2251ce00107f4432a074cd9ba',
+    authToken = '4e858aa74df87b3bfc91bd5df8876950';
+SMServer = require('twilio')(accountSid, authToken),
+    myTwilioNumber = '052525252';
 // awsSdk = require('aws-sdk');
 
 //Init the SMTP transport
@@ -41,7 +45,7 @@ function sendContactUsEmail(body) {
     };
 
     // send mail with defined transport object
-    transporter.sendMail(mailOptions, function(error, info) {
+    transporter.sendMail(mailOptions, function (error, info) {
         if (error) {
             return console.log(error);
         }
@@ -58,7 +62,7 @@ function sendGeneralEmail(to, subject, body) {
     };
 
     // send mail with defined transport object
-    transporter.sendMail(mailOptions, function(error, info) {
+    transporter.sendMail(mailOptions, function (error, info) {
         if (error) {
             return console.log(error);
         }
@@ -67,12 +71,54 @@ function sendGeneralEmail(to, subject, body) {
 }
 
 
-exports.sendMail = function(req, res, next) {
+exports.sendMail = function (req, res, next) {
     sendContactUsEmail(req.body);
     res.send("ok");
 };
 
-var getErrorMessage = function(err) {
+exports.sendSms = function (req, res, next) {
+    sendUserSMS(req.body);
+};
+
+function sendUserSMS(body) {
+    const promise = User.updateSmsStatusToSend(body.userID);
+    promise.then(userPhone => {
+        userPhone = userPhone.substring(1);
+        userPhone = '+972' + userPhone;
+
+        SMServer.messages.create(
+            {
+                to: userPhone,
+                from: '+972524880947',
+                body: 'Hi! this is a reminder for the MTA Hack, please response "1" to approve your arrivel and "0" to decline'
+            },
+            ((err, sms) => {
+                if (err) {
+                    console.log(err);
+                } else {
+                    console.log(sms);
+                }
+            })
+        );
+
+    })
+
+}
+
+exports.incomingSmsHandler = function (req, res) {
+    User.updateSmsResponse(req.body.From, req.body.Body)
+        .then(user => {
+                console.log(`SMS was send to ${user.email} successfully`);
+                res.end();
+            }
+        )
+        .catch(err => {
+            console.error(err);
+        });
+
+}
+
+var getErrorMessage = function (err) {
     var message = '';
     if (err.code) {
         switch (err.code) {
@@ -95,7 +141,7 @@ var getErrorMessage = function(err) {
 };
 
 exports.handleAuthtCustomCB = function handleAuthtCustomCB(req, res, next) {
-    passport.authenticate('local', function(err, user, info) {
+    passport.authenticate('local', function (err, user, info) {
         var redirectRoute = '';
         if (err) {
             return next(err);
@@ -108,7 +154,7 @@ exports.handleAuthtCustomCB = function handleAuthtCustomCB(req, res, next) {
             }
             return res.redirect('/login');
         }
-        req.logIn(user, function(err) {
+        req.logIn(user, function (err) {
             if (err) {
                 return next(err);
             }
@@ -152,7 +198,7 @@ exports.renderMentorUp = function renderMentorUp(req, res) {
     }
 };
 
-exports.renderLogin = function(req, res, next) {
+exports.renderLogin = function (req, res, next) {
     if (!req.user) {
         res.render('index', {
             user: '',
@@ -168,7 +214,7 @@ exports.renderLogin = function(req, res, next) {
     }
 };
 
-exports.renderRegister = function(req, res, next) {
+exports.renderRegister = function (req, res, next) {
     if (!req.user) {
         res.render('register', {
             user: '',
@@ -198,7 +244,7 @@ exports.renderRegister = function(req, res, next) {
     }
 };
 
-exports.renderMentorRegistration = function(req, res) {
+exports.renderMentorRegistration = function (req, res) {
     if (!req.user) {
         res.render('mentor-register', {
             user: '',
@@ -230,9 +276,9 @@ exports.renderMentorRegistration = function(req, res) {
 };
 
 
-exports.renderPrintUsers = function(req, res, next) {
+exports.renderPrintUsers = function (req, res, next) {
     //if (!req.user) {
-    User.find({'role': ROLES.Student}, function(err, users) {
+    User.find({'role': ROLES.Student}, function (err, users) {
         if (err) {
             return next(err);
         }
@@ -269,8 +315,8 @@ exports.renderPrintUsers = function(req, res, next) {
     });
 };
 
-exports.renderPrintMentors = function(req, res, next) {
-    User.find({'role': ROLES.Mentor}, function(err, mentors) {
+exports.renderPrintMentors = function (req, res, next) {
+    User.find({'role': ROLES.Mentor}, function (err, mentors) {
         if (err) {
             next(err);
         } else {
@@ -306,13 +352,13 @@ exports.renderPrintMentors = function(req, res, next) {
     })
 };
 
-exports.renderAdminspace = function(req, res, next) {
+exports.renderAdminspace = function (req, res, next) {
 
-    User.find({}, function(err, users) {
+    User.find({}, function (err, users) {
         if (err) {
             return next(err);
         } else {
-            Team.count({}, function(err, teamCount) {
+            Team.count({}, function (err, teamCount) {
                 var usersMap = mapUsers(users);
                 res.render('adminspace', {
                     eventName: config.eventname,
@@ -350,7 +396,7 @@ var mapUsers = function mapUsers(users) {
         mentorsCount = 0,
         approvedUsersCount = 0;
     if (users instanceof Array && users.length > 0) {
-        users.forEach(function(user) {
+        users.forEach(function (user) {
             if (user.role === ROLES.Student) {
                 studentsCount++;
                 if (user.accepted) {
@@ -370,8 +416,8 @@ var mapUsers = function mapUsers(users) {
 
 };
 
-exports.renderParams = function(req, res, next) {
-    Param.find({}, function(err, params) {
+exports.renderParams = function (req, res, next) {
+    Param.find({}, function (err, params) {
         if (err) {
             return next(err);
         }
@@ -403,7 +449,7 @@ exports.renderParams = function(req, res, next) {
     });
 };
 
-exports.renderReset = function(req, res, next) {
+exports.renderReset = function (req, res, next) {
     if (req.user && User.isAdmin(req.user)) {
         res.render('reset', {
             title: 'reset password',
@@ -421,10 +467,10 @@ exports.renderReset = function(req, res, next) {
     }
 };
 
-exports.renderResetme = function(req, res, next) {
+exports.renderResetme = function (req, res, next) {
     if (!req.user && req.params.resetId) {
         if (req.params.resetId.length > 0) {
-            User.findOne({resetPass: req.params.resetId}, function(err, user) {
+            User.findOne({resetPass: req.params.resetId}, function (err, user) {
                     if (err) {
                         console.log("cant access db to render resetme " + err);
                         res.render('resetme',
@@ -518,11 +564,11 @@ exports.renderResetme = function(req, res, next) {
     }
 };
 
-exports.passer = function(req, res, next) {
+exports.passer = function (req, res, next) {
     if (!req.body.email || req.body.email === "" || !req.body.resetPass || req.body.resetPass.length == 0) {
         res.send("You did something wrong.\n Try again or contact " + config.emailAddr);
     }
-    User.findOne({resetPass: req.body.resetPass}, function(err, user) {
+    User.findOne({resetPass: req.body.resetPass}, function (err, user) {
         if (err) {
             res.send("error")
         } else if (!user) {
@@ -532,7 +578,7 @@ exports.passer = function(req, res, next) {
         } else {
             user.resetPass = "";
             user.password = req.body.password;
-            user.save(function(err) {
+            user.save(function (err) {
                 if (err) {
                     console.log("we have update error");
                     console.log(err);
@@ -545,10 +591,10 @@ exports.passer = function(req, res, next) {
     });
 
 };
-exports.forgot = function(req, res, next) {
+exports.forgot = function (req, res, next) {
     console.log(req.body.email);
     var link = Math.random().toString(36).substring(7);
-    User.findOneAndUpdate({email: req.body.email}, {resetPass: link}, function(err, user) {
+    User.findOneAndUpdate({email: req.body.email}, {resetPass: link}, function (err, user) {
             if (err) {
                 console.log(err);
                 res.send("ERR");
@@ -568,7 +614,7 @@ exports.forgot = function(req, res, next) {
     );
 };
 
-exports.renderUploadCV = function(req, res) {
+exports.renderUploadCV = function (req, res) {
     res.render('upload-cv', {
         user: req.user,
         pageTitle: 'Upload your CV',
@@ -583,7 +629,7 @@ exports.renderUploadCV = function(req, res) {
 
 };
 
-exports.register = function(req, res) {
+exports.register = function (req, res) {
     if (!req.user) {
         var user = new User(req.body);
         user.provider = 'local';
@@ -614,12 +660,12 @@ exports.register = function(req, res) {
 };
 
 
-exports.mentorRegistration = function(req, res) {
+exports.mentorRegistration = function (req, res) {
     if (!req.user) {
         var user = new User(req.body);
         user.role = 'mentor';
         user.provider = 'local';
-        user.save(function(err) {
+        user.save(function (err) {
             if (err) {
                 console.log(err);
                 var message = getErrorMessage(err);
@@ -641,28 +687,28 @@ exports.mentorRegistration = function(req, res) {
     }
 };
 
-exports.logout = function(req, res) {
+exports.logout = function (req, res) {
     req.logout();
     res.redirect('/team-up');
 };
 
-exports.saveOAuthUserProfile = function(req, profile, done) {
+exports.saveOAuthUserProfile = function (req, profile, done) {
     User.findOne({
             provider: profile.provider,
             providerId: profile.providerId
         },
-        function(err, user) {
+        function (err, user) {
             if (err) {
                 return done(err);
             }
             else {
                 if (!user) {
                     var possibleUsername = profile.username || ((profile.email) ? profile.email.split('@')[0] : '');
-                    User.findUniqueUsername(possibleUsername, null, function(availableUsername) {
+                    User.findUniqueUsername(possibleUsername, null, function (availableUsername) {
                         profile.username = availableUsername;
                         user = new User(profile);
 
-                        user.save(function(err) {
+                        user.save(function (err) {
                             if (err) {
                                 var message = _this.getErrorMessage(err);
                                 req.flash('error', message);
@@ -683,22 +729,21 @@ exports.saveOAuthUserProfile = function(req, profile, done) {
 
 try {
     exports.s3StorageConfig = s3({
-        destination: function(req, file, cb) {
+        destination: function (req, file, cb) {
             cb(null, 'students/cvs');
         },
-        filename: function(req, file, cb) {
+        filename: function (req, file, cb) {
             cb(null, file.originalname);
         }
     });
-} catch (e){
+} catch (e) {
     console.error("No S3 Bucket has configured.");
 }
 
 
-
-exports.create = function(req, res, next) {
+exports.create = function (req, res, next) {
     var user = new User(req.body);
-    user.save(function(err) {
+    user.save(function (err) {
         if (err) {
             return next(err);
         }
@@ -708,8 +753,8 @@ exports.create = function(req, res, next) {
     });
 };
 
-exports.list = function(req, res, next) {
-    User.find({}, '-password', function(err, users) {
+exports.list = function (req, res, next) {
+    User.find({}, '-password', function (err, users) {
         if (err) {
             return next(err);
         }
@@ -719,16 +764,16 @@ exports.list = function(req, res, next) {
     });
 };
 
-exports.read = function(req, res) {
+exports.read = function (req, res) {
     var retVal = {"isMember": req.userDetails.isMember, "team": req.userDetails.team}
     res.json(retVal);
 };
 
-exports.userByID = function(req, res, next, id) {
+exports.userByID = function (req, res, next, id) {
     if (id.match(/^[0-9a-fA-F]{24}$/)) {
         //Yes, it's a valid ObjectId, proceed with `findById` call.
 
-        User.findOne({_id: id}, function(err, user) {
+        User.findOne({_id: id}, function (err, user) {
                 if (err) {
                     console.log(err);
                     return next(err);
@@ -742,7 +787,7 @@ exports.userByID = function(req, res, next, id) {
             }
         );
     } else if (id.match(/\S+@\S+\.\S+/)) {
-        User.findOne({email: {$regex: new RegExp(id, "i")}}, function(err, user) {
+        User.findOne({email: {$regex: new RegExp(id, "i")}}, function (err, user) {
                 if (err) {
                     console.log(err);
                     return next(err);
@@ -761,9 +806,9 @@ exports.userByID = function(req, res, next, id) {
 
 };
 
-exports.isUserSuperAdminRole = function(req, res, next) {
+exports.isUserSuperAdminRole = function (req, res, next) {
     if (req.user) {
-        User.findById(req.user._id, function(err, user) {
+        User.findById(req.user._id, function (err, user) {
             if (err) {
                 return next(err);
             } else if (user.role === ROLES.SuperAdmin) {
@@ -777,9 +822,9 @@ exports.isUserSuperAdminRole = function(req, res, next) {
     }
 };
 
-exports.isUserAdminRole = function(req, res, next) {
+exports.isUserAdminRole = function (req, res, next) {
     if (req.user) {
-        User.findById(req.user._id, function(err, user) {
+        User.findById(req.user._id, function (err, user) {
             if (err) {
                 return next(err);
             } else if ((user.role === ROLES.Admin) || (user.role === ROLES.SuperAdmin)) {
@@ -794,8 +839,8 @@ exports.isUserAdminRole = function(req, res, next) {
 
 };
 
-exports.update = function(req, res, next) {
-    User.findByIdAndUpdate(req.userDetails._id, req.body, function(err, user) {
+exports.update = function (req, res, next) {
+    User.findByIdAndUpdate(req.userDetails._id, req.body, function (err, user) {
         if (err) {
             return next(err);
         }
@@ -805,8 +850,8 @@ exports.update = function(req, res, next) {
     });
 };
 
-exports.updateParam = function(req, res, next) {
-    Param.findByIdAndUpdate(req.params.paramId, req.body, function(err, user) {
+exports.updateParam = function (req, res, next) {
+    Param.findByIdAndUpdate(req.params.paramId, req.body, function (err, user) {
         if (err) {
             return next(err);
         }
@@ -816,8 +861,8 @@ exports.updateParam = function(req, res, next) {
     });
 };
 
-exports.delete = function(req, res, next) {
-    req.user.remove(function(err) {
+exports.delete = function (req, res, next) {
+    req.user.remove(function (err) {
         if (err) {
             return next(err);
         }
@@ -827,7 +872,7 @@ exports.delete = function(req, res, next) {
     })
 };
 
-exports.logedIn = function(req, res, next) {
+exports.logedIn = function (req, res, next) {
     if (req.user) {
         next();
     } else {
@@ -835,11 +880,11 @@ exports.logedIn = function(req, res, next) {
     }
 };
 
-exports.userAgree = function(req, res, next) {
+exports.userAgree = function (req, res, next) {
     if (req.params.userIdToUpdate) {
         if (req.params.userIdToUpdate.match(/^[0-9a-fA-F]{24}$/)) {
             //Yes, it's a valid ObjectId, proceed with `findById` call.
-            User.findByIdAndUpdate({_id: req.params.userIdToUpdate}, {"accepted": true}, function(err, user) {
+            User.findByIdAndUpdate({_id: req.params.userIdToUpdate}, {"accepted": true}, function (err, user) {
                 if (err) {
                     res.status(500).send("<h4>We had an internal error, please try again or contact " + config.emailAddr + "</h4>");
                 }
@@ -880,14 +925,14 @@ exports.userAgree = function(req, res, next) {
     }
 };
 
-exports.isInTeam = function(req, res, next) {
+exports.isInTeam = function (req, res, next) {
     (req.user.team.length > 0) ? res.status(400).send('User already in a team') : next();
 };
 
-exports.searchUserByEmailAutocomplete = function(req, res) {
+exports.searchUserByEmailAutocomplete = function (req, res) {
     var regex = new RegExp(req.query["term"], 'i');
     var query = User.find({'email': regex}, {'_id': 1, 'email': 1});
-    query.exec(function(err, users) {
+    query.exec(function (err, users) {
         if (err) {
             res.status(401).send(JSON.stringify(err));
         } else {
@@ -896,21 +941,21 @@ exports.searchUserByEmailAutocomplete = function(req, res) {
     });
 };
 
-exports.leaveTeam = function(req, res) {
+exports.leaveTeam = function (req, res) {
     const teamId = req.user.team;
     if (!teamId) {
         res.status(400).send("User not in a group");
     } else {
-        User.findOneAndUpdate({_id: req.user._id}, {isMember: false, team: ''}, function(err, user) {
+        User.findOneAndUpdate({_id: req.user._id}, {isMember: false, team: ''}, function (err, user) {
             if (err) {
                 res.status(500).send(err);
             } else {
                 Team.removeUserFromGroup(user, teamId)
-                    .then(function(team) {
+                    .then(function (team) {
                         console.log(req.user.email + " was deleted from group " + team.team_name);
                         res.send(req.user.email + " was deleted from group " + team.team_name);
                     })
-                    .catch(function(e) {
+                    .catch(function (e) {
                         res.status(400).send(e);
                     })
                     .done();
@@ -920,7 +965,7 @@ exports.leaveTeam = function(req, res) {
 };
 
 exports.updateUserUploadCV = function updateUserUploadCV(req, res, next) {
-    User.findOneAndUpdate({_id: req.user._id}, {cs_file_name: req.user.first_name + '_' + req.user.last_name + '_cv.pdf'}, function(err) {
+    User.findOneAndUpdate({_id: req.user._id}, {cs_file_name: req.user.first_name + '_' + req.user.last_name + '_cv.pdf'}, function (err) {
         if (err) {
             next(new Error(err));
         } else {

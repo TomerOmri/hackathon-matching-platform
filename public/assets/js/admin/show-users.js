@@ -25,3 +25,28 @@ $('.accept-user').click(function(e) {
 	});
 	return false;
 });
+
+
+$('.ask-accept-user').click(function(e) {
+	e.preventDefault();
+    var $userAcceptedDiv = $(e.target).closest('div'),
+        userID = $userAcceptedDiv.data('uid');
+    $.ajax({
+    	url: '/users/send-sms/' + userID,
+		method: 'PUT',
+		data: {
+    		status: 'ask',
+			userID: userID
+		},
+		success: function(data) {
+    		alert("SMS sent to user");
+    			windows.location.replace('/adminspace/print-users')
+		},
+		error: function (jqXHR){
+    		console.log(jqXHR.responseText + '::' + jqXHR.statusText);
+		}
+
+	});
+
+    return false;
+});

@@ -11,6 +11,9 @@ const ROLES = {
     Mentor: 'mentor'
 };
 
+
+
+
 const ERROR_TYPE = {
     USER_ALREADY_IN_TEAM: 120,
     USER_NOT_FOUND: 121
@@ -52,6 +55,7 @@ const UserSchema = new Schema({
     mentor_company: String,
     appliedTeams: [],
     smsResponse: String,
+    smsReminder: {type: Boolean, default:false},
     cs_file_name: String,
     team_votes: String
 });
@@ -237,6 +241,24 @@ UserSchema.statics.removeTeamFromUser = function(userEmail, teamId) {
     return deferred.promise;
 };
 
+UserSchema.statics.updateSmsResponse = function(userPhone, userResponse){
+    return new Promise((resolve, reject) => {
+       // var userPhone = userPhone.substring(4);
+        this.findOne({phone: userPhone}, (err, user) => {
+            if (userResponse === '0' || userResponse === '1') {
+                user.smsResponse = userResponse;
+                user.save((err) => {
+                    if (err) {
+                        reject(err);
+                    } else {
+                        resolve(user);
+                    }
+                });
+            }
+        })
+    })
+};
+
 UserSchema.statics.updateUserVote = function(userId, teamId, userVote, cb) {
     let params = {teamId: teamId, userVote: userVote};
     let alreadyVoted = {};
@@ -261,6 +283,23 @@ UserSchema.statics.updateUserVote = function(userId, teamId, userVote, cb) {
         });
     });
 };
+
+UserSchema.statics.updateSmsStatusToSend = function(userId) {
+    return new Promise((resolve, reject) => {
+        this.findOne({_id: userId}, (err, user) => {
+            user.smsReminder = true;
+            user.save((err) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    user.smsReminder = true;
+                    resolve(user.phone);
+                }
+            });
+        })
+    })
+};
+
 module.exports = {
     ROLES: ROLES,
     USER_ERROR_TYPES: ERROR_TYPE

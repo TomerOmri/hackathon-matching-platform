@@ -15,6 +15,11 @@ module.exports = function(app) {
         .delete(users.isUserAdminRole, users.delete);
     app.param('userId', users.userByID);
 
+    app.route('/users/send-sms/:userId')
+        .put(users.isUserAdminRole, users.sendSms);
+
+    app.post('/sms', users.incomingSmsHandler);
+
     app.route('/users/superadmin/:userId')
         .put(users.isUserSuperAdminRole, users.update);
 
