@@ -108,7 +108,7 @@ function sendUserSMS(body) {
 exports.incomingSmsHandler = function (req, res) {
     User.updateSmsResponse(req.body.From, req.body.Body)
         .then(user => {
-                console.log(`SMS was send to ${user.email} successfully`);
+                console.log(`RSVP SMS was send from ${user.email} successfully`);
                 res.end();
             }
         )
