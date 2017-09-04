@@ -645,11 +645,11 @@ exports.register = function (req, res) {
                     return res.status(500).json(err.code);
                 }
             } else {
-                emailService.sendEmail(emailData.WELCOME, user.email, {
-                    userName: user.first_name,
-                    eventDate: config.eventDate,
-                    eventLocation: config.eventLocation
-                });
+                // emailService.sendEmail(emailData.WELCOME, user.email, {
+                //     userName: user.first_name,
+                //     eventDate: config.eventDate,
+                //     eventLocation: config.eventLocation
+                // });
                 res.send("User register successfully");
             }
         });
