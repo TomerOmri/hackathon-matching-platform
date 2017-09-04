@@ -54,7 +54,7 @@ const UserSchema = new Schema({
     },
     mentor_company: String,
     appliedTeams: [],
-    smsResponse: String,
+    smsResponse: {type: String, default: "2"},
     smsReminder: {type: Boolean, default:false},
     cs_file_name: String,
     team_votes: String
