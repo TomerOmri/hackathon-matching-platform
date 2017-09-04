@@ -1,9 +1,9 @@
 const ENV = process.env,
-    port = ENV.WEB_PORT || 80,
+    port = 3000,
     host = ENV.IP || '127.0.0.1',
-    mongo = ENV.MONGO_URL || '',
-    emailAddr = ENV.EMAIL_ADDR || '',
-    emailPass = ENV.EMAIL_PASS || '',
+    mongo =  "mongodb://localhost/ninjadb",
+    emailAddr = 'mta.hackathon@gmail.com',
+    emailPass = 'mtahack2017',
     supportEmailAddr = ENV.SUPP_EMAIL_ADDR || '',
     eventname = ENV.EVENT_NAME,
     eventMediaLinks = {
@@ -12,8 +12,10 @@ const ENV = process.env,
         twitter: ENV.TWITTER,
         google: ENV.GOOGLE_PLUS
     },
+    accountSid = 'ACXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
+    authToken = 'your_auth_token',
     maxNumOfUsersInTeam = ENV.MAX_USERS,
-    adminEmail = ENV.ADMIN_EMAIL;
+    adminEmail = 'tomer92@gmail.com';
 module.exports = {
     port: port,
     host: host,

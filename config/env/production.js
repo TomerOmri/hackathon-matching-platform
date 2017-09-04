@@ -19,17 +19,17 @@ const ENV = process.env,
     eventLocation = ENV.EVENT_LOCATION;
 
 module.exports = {
-    port: port,
-    host: host,
-    db: mongo,
-    emailAddr: emailAddr,
-    emailPass: emailPass,
-    supportEmailAddr: supportEmailAddr,
+    port: 3000,
+    host: 'localhost',
+    db: 'mongodb://mta.hackathon:mtahack2017@ds145178.mlab.com:45178/registrationplatform',
+    emailAddr: 'mta.hackathon@gmail.com',
+    emailPass: 'mtahack2017',
+    supportEmailAddr:'mta.hackathon@gmail.com',
     eventname: eventname,
     eventwebsite: eventMediaLinks.website,
     eventMediaLinks: eventMediaLinks,
     maxNumOfUsersInTeam: maxNumOfUsersInTeam,
-    adminEmail: adminEmail,
+    adminEmail: 'mta.hackathon@gmail.com',
     eventDate: eventDate,
     eventLocation: eventLocation
 };

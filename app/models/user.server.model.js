@@ -243,7 +243,7 @@ UserSchema.statics.removeTeamFromUser = function(userEmail, teamId) {
 
 UserSchema.statics.updateSmsResponse = function(userPhone, userResponse){
     return new Promise((resolve, reject) => {
-       // var userPhone = userPhone.substring(4);
+        var userPhone = userPhone.substring(4);
         this.findOne({phone: userPhone}, (err, user) => {
             if (userResponse === '0' || userResponse === '1') {
                 user.smsResponse = userResponse;
